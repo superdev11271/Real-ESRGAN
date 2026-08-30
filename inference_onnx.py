@@ -10,7 +10,8 @@ class RealESRGANOnnx():
     """Upsample images with an exported Real-ESRGAN ONNX model.
 
     Args:
-        model_path (str): Path to the .onnx model.
+        model_path (str): Path to the .onnx model. fp32 and fp16 models are
+            both supported; the input dtype is read from the model.
         providers (list): onnxruntime execution providers. Defaults to CUDA if
             available, else CPU.
     """
@@ -21,20 +22,23 @@ class RealESRGANOnnx():
             providers = ['CUDAExecutionProvider'] if 'CUDAExecutionProvider' in available else []
             providers.append('CPUExecutionProvider')
         self.session = onnxruntime.InferenceSession(model_path, providers=providers)
-        self.input_name = self.session.get_inputs()[0].name
+        inp = self.session.get_inputs()[0]
+        self.input_name = inp.name
+        # fp16 models expect a float16 tensor; everything else stays float32
+        self.dtype = np.float16 if inp.type == 'tensor(float16)' else np.float32
 
     def preprocess(self, imgs):
-        """List of BGR uint8 HWC [0, 255] -> RGB float32 NCHW [0, 1]."""
+        """List of BGR uint8 HWC [0, 255] -> RGB NCHW [0, 1] in the model's dtype."""
         batch = []
         for img in imgs:
             img = img.astype(np.float32) / 255.
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             batch.append(np.transpose(img, (2, 0, 1)))
-        return np.stack(batch)
+        return np.stack(batch).astype(self.dtype)
 
     def postprocess(self, output):
-        """RGB float32 NCHW [0, 1] -> list of BGR uint8 HWC [0, 255]."""
-        output = np.clip(output, 0, 1)
+        """RGB float NCHW [0, 1] -> list of BGR uint8 HWC [0, 255]."""
+        output = np.clip(output.astype(np.float32), 0, 1)
         imgs = []
         for img in output:
             img = np.transpose(img, (1, 2, 0))
