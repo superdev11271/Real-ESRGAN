@@ -65,6 +65,23 @@ python inference_onnx.py -i test/00003.png -m weights/RealESRGAN_x4plus.onnx
 The scale is inferred from the output size, so there is no `-s` flag. Uses
 `CUDAExecutionProvider` when available, falling back to `CPUExecutionProvider`.
 
+## fp32 vs fp16
+
+`RealESRGAN_x2plus`, a 512x353 input, `CUDAExecutionProvider` on an RTX 4070,
+5 warmup runs then 20 timed runs of `infer()`:
+
+| | mean | std | min | max |
+| --- | --- | --- | --- | --- |
+| fp32 | 183.6 ms | 0.9 | 181.5 | 185.0 |
+| fp16 | 117.0 ms | 1.1 | 115.5 | 120.0 |
+
+fp16 is **1.57x faster**, at a max per-pixel difference of 1/255 (mean 0.038) —
+under half a quantization step, so the output is visually identical.
+
+Timings are end-to-end `infer()`, including the float32 pre/postprocess that both
+paths share, so the session-only speedup is higher. The ratio also shifts with
+resolution and GPU.
+
 ## As a library
 
 Both entry points expose a class with `infer` (one image) and `infer_batch`
