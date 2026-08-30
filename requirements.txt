@@ -1,0 +1,6 @@
+basicsr>=1.4.2
+numpy>=1.24
+onnx>=1.14
+onnxruntime>=1.16  # swap for onnxruntime-gpu to use CUDAExecutionProvider
+opencv-python>=4.8
+torch>=2.0
