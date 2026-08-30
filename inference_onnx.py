@@ -57,8 +57,13 @@ class RealESRGANOnnx():
         """
         shapes = {img.shape for img in imgs}
         assert len(shapes) == 1, f'batched images must share one shape, got {shapes}'
-        output = self.session.run(None, {self.input_name: self.preprocess(imgs)})[0]
-        return self.postprocess(output)
+        x = self.preprocess(imgs)
+        # x2 models pixel_unshuffle by 2, so H/W must be even: pad, then crop back
+        h, w = x.shape[2:]
+        x = np.pad(x, ((0, 0), (0, 0), (0, h % 2), (0, w % 2)), mode='edge')
+        output = self.session.run(None, {self.input_name: x})[0]
+        scale = output.shape[2] // x.shape[2]
+        return self.postprocess(output[:, :, :scale * h, :scale * w])
 
 
 def main():

@@ -92,3 +92,7 @@ out = upsampler.infer(cv2.imread('test/00003.png', cv2.IMREAD_COLOR))
 - The whole image is processed in one pass — there is no tiling, so large inputs
   are limited by available GPU memory.
 - Batched ONNX inference requires a model exported with `--dynamic`.
+- The x2 models `pixel_unshuffle` by 2, so they need even input dimensions. Odd
+  inputs are padded by one edge pixel and the output is cropped back, so the
+  result is always exactly `scale` times the input size.
+- ONNX models may be fp32 or fp16; the input dtype is read from the model.

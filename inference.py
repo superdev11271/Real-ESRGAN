@@ -58,7 +58,12 @@ class RealESRGAN():
         """Upsample a list of BGR uint8 images sharing the same shape."""
         shapes = {img.shape for img in imgs}
         assert len(shapes) == 1, f'batched images must share one shape, got {shapes}'
-        return self.postprocess(self.model(self.preprocess(imgs)))
+        x = self.preprocess(imgs)
+        # x2 models pixel_unshuffle by 2, so H/W must be even: pad, then crop back
+        h, w = x.shape[2:]
+        x = torch.nn.functional.pad(x, (0, w % 2, 0, h % 2), mode='replicate')
+        output = self.model(x)
+        return self.postprocess(output[:, :, :self.scale * h, :self.scale * w])
 
 
 def main():
