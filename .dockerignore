@@ -1,0 +1,7 @@
+models/
+results/
+test/
+__pycache__/
+.git/
+Dockerfile
+.dockerignore
