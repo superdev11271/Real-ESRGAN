@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, required=True, help='input image path')
     parser.add_argument('-o', '--output', type=str, default='results', help='output folder')
-    parser.add_argument('-m', '--model_path', type=str, default='weights/RealESRGAN_x4plus.onnx')
+    parser.add_argument('-m', '--model_path', type=str, default='models/RealESRGAN_x4plus.onnx')
     args = parser.parse_args()
 
     upsampler = RealESRGANOnnx(args.model_path)

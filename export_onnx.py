@@ -8,14 +8,14 @@ from basicsr.archs.rrdbnet_arch import RRDBNet
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model_path', type=str, default='weights/RealESRGAN_x4plus.pth')
+    parser.add_argument('-m', '--model_path', type=str, default='models/RealESRGAN_x4plus.pth')
     parser.add_argument('-o', '--output', type=str, default=None, help='output .onnx path')
     parser.add_argument('-s', '--scale', type=int, default=4, help='native scale of the network')
     parser.add_argument('--num_block', type=int, default=23, help='6 for the anime_6B model')
     parser.add_argument('--dynamic', action='store_true', help='also make the batch dimension dynamic')
     args = parser.parse_args()
 
-    # default: alongside the checkpoint, e.g. weights/RealESRGAN_x4plus.onnx
+    # default: alongside the checkpoint, e.g. models/RealESRGAN_x4plus.onnx
     output = args.output or os.path.splitext(args.model_path)[0] + '.onnx'
 
     model = RRDBNet(

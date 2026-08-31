@@ -21,7 +21,7 @@ For GPU ONNX inference, install `onnxruntime-gpu` instead of `onnxruntime`.
 
 ## Weights
 
-Put the pretrained `.pth` files in `weights/`. Download them from the
+Put the pretrained `.pth` files in `models/`. Download them from the
 [Real-ESRGAN releases](https://github.com/xinntao/Real-ESRGAN/releases):
 
 | Model | Scale | `--num_block` |
@@ -36,13 +36,13 @@ Put the pretrained `.pth` files in `weights/`. Download them from the
 ### PyTorch
 
 ```bash
-python inference.py -i test/00003.png -m weights/RealESRGAN_x4plus.pth -s 4
+python inference.py -i test/00003.png -m models/RealESRGAN_x4plus.pth -s 4
 ```
 
 The anime model has 6 RRDB blocks instead of 23:
 
 ```bash
-python inference.py -i test/00003.png -m weights/RealESRGAN_x4plus_anime_6B.pth -s 4 --num_block 6
+python inference.py -i test/00003.png -m models/RealESRGAN_x4plus_anime_6B.pth -s 4 --num_block 6
 ```
 
 Options: `-i/--input` (required), `-o/--output` (folder, default `results`),
@@ -54,17 +54,17 @@ CUDA is used when available, otherwise CPU.
 ### Export to ONNX
 
 ```bash
-python export_onnx.py -m weights/RealESRGAN_x4plus.pth -s 4
+python export_onnx.py -m models/RealESRGAN_x4plus.pth -s 4
 ```
 
-Writes `weights/RealESRGAN_x4plus.onnx` (override with `-o`). Height and width are
+Writes `models/RealESRGAN_x4plus.onnx` (override with `-o`). Height and width are
 always dynamic, so one exported model handles any input resolution. Pass `--dynamic`
 to make the batch dimension dynamic too, which is required for batched ONNX inference.
 
 ### ONNX Runtime
 
 ```bash
-python inference_onnx.py -i test/00003.png -m weights/RealESRGAN_x4plus.onnx
+python inference_onnx.py -i test/00003.png -m models/RealESRGAN_x4plus.onnx
 ```
 
 The scale is inferred from the output size, so there is no `-s` flag. Uses
@@ -97,7 +97,7 @@ format `cv2.imread` returns.
 import cv2
 from realesrgan import RealESRGAN
 
-upsampler = RealESRGAN('weights/RealESRGAN_x4plus.pth', scale=4)
+upsampler = RealESRGAN('models/RealESRGAN_x4plus.pth', scale=4)
 out = upsampler.infer(cv2.imread('test/00003.png', cv2.IMREAD_COLOR))
 cv2.imwrite('results/00003_x4.png', out)
 ```
@@ -105,7 +105,7 @@ cv2.imwrite('results/00003_x4.png', out)
 ```python
 from realesrgan_onnx import RealESRGANOnnx
 
-upsampler = RealESRGANOnnx('weights/RealESRGAN_x4plus.onnx')
+upsampler = RealESRGANOnnx('models/RealESRGAN_x4plus.onnx')
 out = upsampler.infer(cv2.imread('test/00003.png', cv2.IMREAD_COLOR))
 ```
 

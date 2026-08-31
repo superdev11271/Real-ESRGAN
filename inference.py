@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, required=True, help='input image path')
     parser.add_argument('-o', '--output', type=str, default='results', help='output folder')
-    parser.add_argument('-m', '--model_path', type=str, default='weights/RealESRGAN_x2plus.pth')
+    parser.add_argument('-m', '--model_path', type=str, default='models/RealESRGAN_x2plus.pth')
     parser.add_argument('-s', '--scale', type=int, default=2, help='native scale of the network')
     parser.add_argument('--num_block', type=int, default=23, help='6 for the anime_6B model')
     args = parser.parse_args()
