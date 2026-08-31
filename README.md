@@ -2,9 +2,14 @@
 
 Minimal Real-ESRGAN image upscaling: PyTorch inference, ONNX export, and ONNX Runtime inference.
 
-- [inference.py](inference.py) — upscale an image with a `.pth` checkpoint (PyTorch)
-- [export_onnx.py](export_onnx.py) — export a checkpoint to `.onnx`
-- [inference_onnx.py](inference_onnx.py) — upscale an image with an exported `.onnx` model
+The upsampler classes live in their own modules, with a thin CLI on top of each:
+
+| | class | CLI |
+| --- | --- | --- |
+| PyTorch | [realesrgan.py](realesrgan.py) — `RealESRGAN` | [inference.py](inference.py) |
+| ONNX Runtime | [realesrgan_onnx.py](realesrgan_onnx.py) — `RealESRGANOnnx` | [inference_onnx.py](inference_onnx.py) |
+
+[export_onnx.py](export_onnx.py) exports a `.pth` checkpoint to `.onnx`.
 
 ## Install
 
@@ -84,13 +89,13 @@ resolution and GPU.
 
 ## As a library
 
-Both entry points expose a class with `infer` (one image) and `infer_batch`
-(a list of images that share one shape). Images are BGR `uint8` HWC arrays, the
+Both classes expose `infer` (one image) and `infer_batch` (a list of images that
+share one shape). Images are BGR `uint8` HWC arrays, the
 format `cv2.imread` returns.
 
 ```python
 import cv2
-from inference import RealESRGAN
+from realesrgan import RealESRGAN
 
 upsampler = RealESRGAN('weights/RealESRGAN_x4plus.pth', scale=4)
 out = upsampler.infer(cv2.imread('test/00003.png', cv2.IMREAD_COLOR))
@@ -98,7 +103,7 @@ cv2.imwrite('results/00003_x4.png', out)
 ```
 
 ```python
-from inference_onnx import RealESRGANOnnx
+from realesrgan_onnx import RealESRGANOnnx
 
 upsampler = RealESRGANOnnx('weights/RealESRGAN_x4plus.onnx')
 out = upsampler.infer(cv2.imread('test/00003.png', cv2.IMREAD_COLOR))
