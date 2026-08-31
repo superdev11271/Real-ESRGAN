@@ -1,4 +1,14 @@
-"""FastAPI server exposing Real-ESRGAN ONNX upscaling at POST /api/upscale/."""
+"""FastAPI server exposing Real-ESRGAN ONNX upscaling at POST /api/upscale/.
+
+Start with a model name and a device; the models always live in `MODEL_DIR`:
+
+    python server.py --model RealESRGAN_x2plus.onnx --device cuda
+
+POST an image (multipart field `image`) and get the upscaled image back as
+PNG. Images whose longest side exceeds `--max_side` are downscaled for
+inference and scaled back up to their original size. GET /api/health/ for a
+liveness check.
+"""
 import argparse
 import os
 
@@ -11,23 +21,22 @@ from fastapi.responses import Response
 from realesrgan_onnx import RealESRGANOnnx
 
 MODEL_DIR = 'models'
+DEFAULT_MODEL = 'RealESRGAN_x2plus.onnx'
+DEFAULT_DEVICE = 'cuda'
+DEFAULT_MAX_SIDE = 1920
 
 app = FastAPI(title='Real-ESRGAN ONNX')
 upsampler = None
-model_name = None
-max_side = 1920
+model_info = {}
+max_side = DEFAULT_MAX_SIDE
 
 
 @app.get('/api/health/')
 async def health():
-    """Report whether the model is loaded and which providers it runs on."""
+    """Report whether the model is loaded and how it is configured."""
     if upsampler is None:
         raise HTTPException(status_code=503, detail='model not loaded')
-    return {
-        'status': 'ok',
-        'model': model_name,
-        'providers': upsampler.session.get_providers(),
-    }
+    return {'status': 'ok', **model_info, 'providers': upsampler.session.get_providers()}
 
 
 @app.post('/api/upscale/')
@@ -53,22 +62,22 @@ async def upscale(image: UploadFile = File(...)):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', type=str, default='RealESRGAN_x2plus.onnx',
+    parser.add_argument('-m', '--model', type=str, default=DEFAULT_MODEL,
                         help=f'model file name inside {MODEL_DIR}/')
-    parser.add_argument('-d', '--device', type=str, default='cuda', choices=['cuda', 'cpu'])
-    parser.add_argument('--max_side', type=int, default=1920,
+    parser.add_argument('-d', '--device', type=str, default=DEFAULT_DEVICE, choices=['cuda', 'cpu'])
+    parser.add_argument('--max_side', type=int, default=DEFAULT_MAX_SIDE,
                         help='images with a longer side than this are downscaled before inference')
     parser.add_argument('--host', type=str, default='0.0.0.0')
     parser.add_argument('-p', '--port', type=int, default=8080)
     args = parser.parse_args()
 
-    global upsampler, model_name, max_side
+    global upsampler, max_side
     model_path = os.path.join(MODEL_DIR, args.model)
     if not os.path.isfile(model_path):
         raise FileNotFoundError(model_path)
     upsampler = RealESRGANOnnx(model_path, device=args.device)
-    model_name = args.model
     max_side = args.max_side
+    model_info.update(model=args.model, device=args.device, max_side=args.max_side)
 
     uvicorn.run(app, host=args.host, port=args.port)
 

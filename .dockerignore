@@ -1,7 +1,10 @@
+.git/
+__pycache__/
+*.pyc
 models/
+output/
 results/
 test/
-__pycache__/
-.git/
+venv/
 Dockerfile
 .dockerignore

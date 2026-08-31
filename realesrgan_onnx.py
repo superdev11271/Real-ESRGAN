@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import onnxruntime
 
+
 class RealESRGANOnnx():
     """Upsample images with an exported Real-ESRGAN ONNX model.
 
