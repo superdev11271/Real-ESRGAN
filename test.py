@@ -44,6 +44,7 @@ def timed(method, url, **kwargs):
 def run(args, source):
     """Run the three checks against the server and return them as a list of bools."""
     results = []
+    form = {'model': args.model} if args.model else {}
 
     response, seconds = timed('GET', args.url + HEALTH_ROUTE)
     body = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
@@ -53,7 +54,7 @@ def run(args, source):
     with open(args.image, 'rb') as handle:
         response, seconds = timed(
             'POST', args.url + ROUTE,
-            files={'image': (os.path.basename(args.image), handle, 'image/png')})
+            files={'image': (os.path.basename(args.image), handle, 'image/png')}, data=form)
     is_png = response.status_code == 200 and response.headers.get('content-type') == 'image/png'
     output = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_COLOR) if is_png else None
     results.append(check('upscale', output is not None, seconds,
@@ -65,7 +66,7 @@ def run(args, source):
 
     response, seconds = timed(
         'POST', args.url + ROUTE,
-        files={'image': ('not_an_image.png', b'not an image', 'image/png')})
+        files={'image': ('not_an_image.png', b'not an image', 'image/png')}, data=form)
     results.append(check('rejects a non-image', response.status_code == 400, seconds,
                          f'{response.status_code} {response.text[:80]}'))
 
@@ -79,6 +80,8 @@ def main():
     parser.add_argument('-o', '--output', type=str, default=None,
                         help='where to write the returned png (default: the input path with '
                              f'{OUTPUT_SUFFIX} in place of its extension)')
+    parser.add_argument('-m', '--model', type=str, default=None,
+                        help='model name to upscale with, as listed by the health route; defaults to the server-side -m1 model')
     args = parser.parse_args()
 
     source = cv2.imread(args.image)

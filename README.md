@@ -43,20 +43,23 @@ outputs = upsampler.infer_batch([img1, img2])                # needs a model exp
 
 ```bash
 python server.py
-python server.py -m RealESRGAN_x4plus_fp16.onnx -d cpu -p 9000
+python server.py -m1 RealESRGAN_x2plus_fp16.onnx -d cpu -p 9000
 ```
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `-m`, `--model` | `RealESRGAN_x2plus.onnx` | Upscaling model file name |
+| `-m1`, `--model1` | `RealESRGAN_x2plus.onnx` | Model 1, and the fallback for requests naming none |
+| `-m2`, `--model2` | `RealESRGAN_x4plus_anime_6B.onnx` | Model 2 |
+| `-m3`, `--model3` | `RealESRGAN_x4plus.onnx` | Model 3 |
+| `-m4`, `--model4` | `RealESRNet_x4plus.onnx` | Model 4 |
 | `-d`, `--device` | `cuda` | `cuda` or `cpu` |
 | `--max_side` | `1920` | Images with a longer side than this are downscaled before inference |
 | `--host` | `0.0.0.0` | Bind address |
 | `-p`, `--port` | `8080` | Bind port |
 
-The model directory is always `models/`, so `--model` take a file name, not a path.
-The model is loaded once at startup and a missing file fails immediately, so startup
-takes a few seconds and the port only opens once the session is ready.
+The model directory is always `models/`, so `-m1` .. `-m4` take a file name, not a path.
+Models load once at startup and a slot whose file is missing is skipped, so startup
+takes a few seconds and the port only opens once every session is ready.
 
 An upload whose longer side exceeds `--max_side` is downscaled to that limit (aspect
 ratio kept), upsampled, then resized back to its **original** dimensions -- so oversized images
@@ -74,12 +77,15 @@ curl http://127.0.0.1:8080/api/health/
 ```
 
 ```json
-{"status": "ok", "model": "RealESRGAN_x2plus.onnx", "device": "cuda", "max_side": 1920,
+{"status": "ok",
+ "models": ["RealESRGAN_x2plus", "RealESRGAN_x4plus_anime_6B", "RealESRGAN_x4plus",
+            "RealESRNet_x4plus"],
+ "default_model": "RealESRGAN_x2plus", "device": "cuda", "max_side": 1920,
  "providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]}
 ```
 
 `providers` comes from the live session, so it shows whether CUDA actually engaged or
-fell back to CPU. `503` if the model is not loaded.
+fell back to CPU. `503` before loading has finished.
 
 ### `POST /api/upscale/`
 
@@ -88,6 +94,7 @@ Request -- `multipart/form-data`:
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `image` | file | required | Image to upscale |
+| `model` | str | the `-m1` model | Which loaded model to use, named as `models` lists it |
 
 Response -- the upscaled image as raw `image/png` bytes at the input's original
 dimensions. `400` if the upload cannot be decoded as an image, `500` if the result
@@ -110,7 +117,7 @@ docker run --gpus all -p 8080:8080 -v ./models:/app/models realesrgan-server
 Server flags pass straight through the entrypoint:
 
 ```bash
-docker run --gpus all -p 8080:8080 -v ./models:/app/models realesrgan-server -m RealESRGAN_x4plus_fp16.onnx --max_side 1280
+docker run --gpus all -p 8080:8080 -v ./models:/app/models realesrgan-server -m1 RealESRGAN_x2plus_fp16.onnx -m2 RealESRGAN_x4plus_fp16.onnx --max_side 1280
 ```
 
 Omit `--gpus all` and pass `-d cpu` to run on CPU. On Windows use an absolute path for
@@ -141,10 +148,10 @@ python test.py test/cat.jpg
 ```
 
 ```
-[PASS] health -- 5ms -- {'status': 'ok', 'model': 'RealESRGAN_x2plus.onnx', ...}
-[PASS] upscale -- 33089ms -- (438, 500, 3) -> (876, 1000, 3)
+[PASS] health -- 4ms -- {'status': 'ok', 'models': ['RealESRGAN_x2plus', ...], 'default_model': 'RealESRGAN_x2plus', ...}
+[PASS] upscale -- 3844ms -- (438, 500, 3) -> (876, 1000, 3)
        wrote test/cat_out.png
-[PASS] rejects a non-image -- 25ms -- 400 {"detail":"could not decode image"}
+[PASS] rejects a non-image -- 3ms -- 400 {"detail":"could not decode image"}
 3/3 checks passed
 ```
 
@@ -156,6 +163,7 @@ give very different numbers.
 | `image` | required | Path to the image to send |
 | `--url` | `http://127.0.0.1:8080` | Base url of the running server |
 | `-o`, `--output` | `test/cat_out.png` | Where to write the returned png; defaults to the input path with `_out.png` in place of its extension |
+| `-m`, `--model` | the `-m1` model | Model name to upscale with, as listed by the health route |
 
 `cat.jpg` is under `--max_side`, so it comes back at the model's scale rather
 than the input size -- that is the expected result, not a failure.
@@ -184,9 +192,16 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST -F "image=@README.md" http://12
 
 ## Notes
 
-- One ONNX session is created at startup and shared. FastAPI runs the endpoint in a
+- ONNX sessions are created at startup and shared. FastAPI runs the endpoint in a
   threadpool, so concurrent requests are correct but throughput is bounded by the
-  single session.
-- The `_fp16` graphs are selected by name, e.g. `--model RealESRGAN_x4plus_fp16.onnx`.
+  session a request runs on.
+- Every model that loads stays resident, so switching between them from one request
+  to the next costs nothing. Point a slot at an `_fp16` graph to load that one
+  instead, e.g. `-m1 RealESRGAN_x2plus_fp16.onnx`; the name a request sends is
+  always the file name without `.onnx`.
+- A slot whose file is missing is skipped with a warning on stderr, whether the
+  name came from you or from the default, so the server comes up on whatever is
+  actually in `models/`. If that leaves nothing loaded it exits with
+  `error: no models found in models/, nothing to serve`.
 - The `.pth` files in `models/` are the original torch checkpoints the ONNX graphs were
   exported from. They are unused at inference time and excluded from the Docker image.
