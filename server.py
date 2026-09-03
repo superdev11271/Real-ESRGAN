@@ -2,7 +2,7 @@
 
 Start with the four models and a device; the models always live in `MODEL_DIR`:
 
-    python server.py -m1 RealESRGAN_x2plus.onnx -m2 RealESRGAN_x4plus_anime_6B.onnx --device cuda
+    python server.py -m1 RealESRGAN_x2plus_fp16.onnx -m2 RealESRGAN_x4plus_fp16.onnx --device cuda
 
 All four are loaded at startup and each request picks one by name with the `model`
 form field, defaulting to the first one loaded. A slot whose file is missing is
@@ -26,10 +26,10 @@ from realesrgan_onnx import RealESRGANOnnx
 
 MODEL_DIR = 'models'
 # the first slot that actually loads is the default requests fall back to
-DEFAULT_MODELS = ['RealESRGAN_x2plus.onnx', 'RealESRGAN_x4plus_anime_6B.onnx',
-                  'RealESRGAN_x4plus.onnx', 'RealESRNet_x4plus.onnx']
+DEFAULT_MODELS = ['RealESRGAN_x2plus_fp16.onnx', 'RealESRGAN_x4plus_anime_6B_fp16.onnx',
+                  'RealESRGAN_x4plus_fp16.onnx', 'RealESRNet_x4plus_fp16.onnx']
 DEFAULT_DEVICE = 'cuda'
-DEFAULT_MAX_SIDE = 1920
+DEFAULT_MAX_SIDE = 1280
 
 app = FastAPI(title='Real-ESRGAN ONNX')
 upsamplers = {}
