@@ -94,7 +94,7 @@ Request -- `multipart/form-data`:
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `image` | file | required | Image to upscale |
-| `model` | str | the `-m1` model | Which loaded model to use, named as `models` lists it |
+| `model` | str | the `-m1` model | Which loaded model to use. The name is the loaded file name without `.onnx`, exactly as `models` in the health route lists it |
 
 Response -- the upscaled image as raw `image/png` bytes at the input's original
 dimensions. `400` if the upload cannot be decoded as an image, `500` if the result
@@ -102,6 +102,11 @@ cannot be encoded.
 
 ```bash
 curl -X POST -F "image=@test/cat.jpg" http://127.0.0.1:8080/api/upscale/ -o test/cat_out.png
+
+# a specific model -- the name is the file name without `.onnx`, exactly as
+# the health route lists it, so an fp16 graph is named with the suffix
+curl -X POST -F "image=@test/cat.jpg" -F "model=RealESRGAN_x4plus_fp16" \
+  http://127.0.0.1:8080/api/upscale/ -o test/cat_out.png
 ```
 
 ## Docker
